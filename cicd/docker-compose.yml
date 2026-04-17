@@ -1,0 +1,33 @@
+name: devops
+
+services:
+  registry:
+    image: registry:2
+    ports:
+      - 5000:5000
+    restart: always
+    environment:
+      # 1. 允许删除镜像
+      - REGISTRY_STORAGE_DELETE_ENABLED=true
+      # 2. 【关键】开启 CORS 跨域访问，否则 UI 连不上
+      - REGISTRY_HTTP_HEADERS_ACCESS-CONTROL-ALLOW-ORIGIN=['*']
+      - REGISTRY_HTTP_HEADERS_ACCESS-CONTROL-ALLOW-METHODS=[HEAD,GET,OPTIONS,DELETE]
+      - REGISTRY_HTTP_HEADERS_ACCESS-CONTROL-ALLOW-HEADERS=[Authorization,Accept,Cache-Control]
+      - REGISTRY_HTTP_HEADERS_ACCESS-CONTROL-EXPOSE-HEADERS=[Docker-Content-Digest]
+    volumes:
+      - ./data/registry:/var/lib/registry
+
+  ui:
+    image: joxit/docker-registry-ui:main
+    container_name: registry-ui
+    ports:
+      - "8080:80"
+    environment:
+      - REGISTRY_TITLE=My Local Registry
+      # 3. 【关键】改成浏览器能访问的地址
+      - REGISTRY_URL=http://localhost:5000
+      - DELETE_IMAGES=true
+      # 4. 界面风格设置（可选）
+      - THEME=dark
+    depends_on:
+      - registry
