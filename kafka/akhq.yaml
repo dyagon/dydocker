@@ -1,0 +1,23 @@
+services:
+  akhq:
+    image: tchiotludo/akhq
+    ports:
+      - "8085:8080"
+
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          server:
+            access-log: true
+          connections:
+            kafka-sasl:
+              properties:
+                bootstrap.servers: "host.docker.internal:9094"
+            kafka-ssl:
+              properties:
+                bootstrap.servers: "host.docker.internal:19094"
+              schema-registry:
+                url: "http://host.docker.internal:8081"
+                basic-auth-username: "admin"
+                basic-auth-password: "admin"
+  

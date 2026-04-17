@@ -1,0 +1,70 @@
+
+services:
+  zookeeper:
+    hostname: zookeeper
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - ./mnt/zookeeper/data:/var/lib/zookeeper/data
+      - ./mnt/zookeeper/log:/var/lib/zookeeper/log
+    
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka
+    ports:
+      - "19093:9093"
+      - "19094:9094"
+    depends_on:
+      - zookeeper
+    healthcheck:
+      test: kafka-topics --bootstrap-server localhost:9092 --list
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ./certs/kafka:/etc/kafka/secrets
+      - ./mnt/kafka:/var/lib/kafka/data
+    environment:
+      # KAFKA_BROKER_ID: 101
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LISTENERS: BROKER://0.0.0.0:9092,SSL://0.0.0.0:9093,DOCKER_INTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: BROKER://kafka:9092,SSL://localhost:19093,DOCKER_INTERNAL://host.docker.internal:19094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: BROKER:PLAINTEXT,SSL:SSL,DOCKER_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: BROKER
+      KAFKA_SSL_KEYSTORE_FILENAME: kafka.keystore.pkcs12
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: kafka_keystore_creds
+      KAFKA_SSL_KEY_CREDENTIALS: kafka_sslkey_creds
+      KAFKA_SSL_TRUSTSTORE_FILENAME: kafka.truststore.pkcs12
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: kafka_truststore_creds
+      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: "HTTPS"
+      KAFKA_SSL_CLIENT_AUTH: "required"
+      KAFKA_LOG_DIR: /var/lib/kafka/data
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    hostname: schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: curl "http://localhost:8081/schemas/types/"
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "kafka:9092"
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_DEBUG: "true"
+      SCHEMA_REGISTRY_BASIC_AUTH_CREDENTIALS_SOURCE: USER_INFO
+      SCHEMA_REGISTRY_SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO: "admin:admin"

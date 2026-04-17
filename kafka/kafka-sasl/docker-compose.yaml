@@ -1,0 +1,35 @@
+services:
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SASL_ENABLED: "false"
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    ports:
+      - "9093:9093"
+      - "9094:9094"
+    depends_on:
+      - zookeeper
+    healthcheck:
+      test: kafka-topics --bootstrap-server localhost:9092 --list
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    environment:
+      KAFKA_BROKER_ID: 11
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LISTENERS: BROKER://0.0.0.0:9092,SASL_PLAINTEXT://0.0.0.0:9093,DOCKER_INTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: BROKER://kafka:9092,SASL_PLAINTEXT://localhost:9093,DOCKER_INTERNAL://host.docker.internal:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: BROKER:PLAINTEXT,SASL_PLAINTEXT:SASL_PLAINTEXT,DOCKER_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: BROKER
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      ZOOKEEPER_SASL_ENABLED: false
+      KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf
+    volumes:
+      - ./kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf

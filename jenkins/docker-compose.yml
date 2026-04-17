@@ -1,0 +1,23 @@
+
+services:
+  jenkins:
+    build: .  # 使用当前目录的 Dockerfile 构建
+    container_name: jenkins
+    restart: unless-stopped
+    ports:
+      - "9000:8080"
+      - "50000:50000"
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      # 1. 数据持久化
+      - ./jenkins_home:/var/jenkins_home
+      
+      # 2. 关键：OrbStack 的 Socket 映射
+      - /var/run/docker.sock:/var/run/docker.sock
+      
+    # 3. 资源限制 (建议在 Mac 上给足一点)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 16G
